@@ -24,9 +24,8 @@ const Footer = () => {
           <div>
             <h3 className="text-white text-lg font-bold mb-4">Contact</h3>
             <p className="text-sm">
-              Email: support@TalentTrack.com<br/>
-              Phone: +1 (555) 123-4567
-            </p>
+              Email: gspreddy6869@gmail.com<br/>
+           </p>
           </div>
         </div>
         <div className="border-t border-gray-700 pt-8">
