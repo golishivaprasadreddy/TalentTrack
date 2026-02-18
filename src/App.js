@@ -9,9 +9,15 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminDriveDetail from './pages/AdminDriveDetail';
+import AdminQuizManagement from './pages/AdminQuizManagement';
+import AdminQuizResponses from './pages/AdminQuizResponses';
+import AdminQuizResponseDetail from './pages/AdminQuizResponseDetail';
 import PanelDashboard from './pages/PanelDashboard';
 import PanelRoundDetail from './pages/PanelRoundDetail';
 import CandidateDashboard from './pages/CandidateDashboard';
+import CandidateQuizDashboard from './pages/CandidateQuizDashboard';
+import CandidateTakeQuiz from './pages/CandidateTakeQuiz';
+import CandidateQuizResult from './pages/CandidateQuizResult';
 import './index.css';
 
 const HomePage = () => {
@@ -70,6 +76,30 @@ const App = () => {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/admin/quiz"
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <AdminQuizManagement />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/quiz/:quizId/responses"
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <AdminQuizResponses />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/quiz/:quizId/response/:responseId"
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <AdminQuizResponseDetail />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Panel Routes */}
           <Route
@@ -95,6 +125,30 @@ const App = () => {
             element={
               <ProtectedRoute requiredRole="candidate">
                 <CandidateDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/candidate/quiz"
+            element={
+              <ProtectedRoute requiredRole="candidate">
+                <CandidateQuizDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/quiz/:quizLink"
+            element={
+              <ProtectedRoute requiredRole="candidate">
+                <CandidateTakeQuiz />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/quiz/result/:quizResultId"
+            element={
+              <ProtectedRoute requiredRole="candidate">
+                <CandidateQuizResult />
               </ProtectedRoute>
             }
           />

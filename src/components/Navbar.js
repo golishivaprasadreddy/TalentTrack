@@ -22,6 +22,31 @@ const Navbar = () => {
           TalentTrack
         </Link>
         <div className="flex items-center space-x-6">
+          {user.role === 'admin' && (
+            <>
+              <Link to="/admin/dashboard" className="hover:text-blue-200 text-sm">
+                Dashboard
+              </Link>
+              <Link to="/admin/quiz" className="hover:text-blue-200 text-sm">
+                Manage Quizzes
+              </Link>
+            </>
+          )}
+          {user.role === 'candidate' && (
+            <>
+              <Link to="/candidate/dashboard" className="hover:text-blue-200 text-sm">
+                Dashboard
+              </Link>
+              <Link to="/candidate/quiz" className="hover:text-blue-200 text-sm">
+                Quizzes
+              </Link>
+            </>
+          )}
+          {user.role === 'panel' && (
+            <Link to="/panel/dashboard" className="hover:text-blue-200 text-sm">
+              Dashboard
+            </Link>
+          )}
           <span className="text-sm">
             Welcome, <strong>{user.name}</strong> ({user.role})
           </span>
