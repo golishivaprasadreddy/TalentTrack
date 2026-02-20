@@ -49,7 +49,6 @@ const CandidateTakeQuiz = () => {
 
       const submissionData = {
         quizId: quiz._id,
-        candidateId: candidate?._id,
         answers: Object.entries(answers)
           .map(([questionIndex, optionIndex]) => ({
             questionId: quiz.questions[questionIndex]._id,

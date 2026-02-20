@@ -48,6 +48,16 @@ const quizService = {
     return response.data;
   },
 
+  getQuizViaDirectLink: async (quizLink) => {
+    const response = await api.get(`/quiz/access/direct/${quizLink}`);
+    return response.data;
+  },
+
+  checkQuizSubmissionStatus: async (quizId) => {
+    const response = await api.get(`/quiz/${quizId}/check-submission`);
+    return response.data;
+  },
+
   submitQuizAnswers: async (submissionData) => {
     const response = await api.post(`/quiz/submit`, submissionData);
     return response.data;

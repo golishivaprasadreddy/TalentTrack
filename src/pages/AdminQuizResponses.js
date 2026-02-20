@@ -9,7 +9,7 @@ const AdminQuizResponses = () => {
   const [quiz, setQuiz] = useState(null);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all'); // all, passed, failed
+  const [filter, setFilter] = useState('all'); // all, passed, failed, suspicious
 
   const fetchData = useCallback(async () => {
     try {
@@ -37,11 +37,50 @@ const AdminQuizResponses = () => {
 
   const getFilteredResponses = () => {
     if (filter === 'passed') {
-      return responses.filter((r) => r.isPassed);
+      return responses.filter((r) => r.isPassed && !r.isSuspicious);
     } else if (filter === 'failed') {
-      return responses.filter((r) => !r.isPassed);
+      return responses.filter((r) => !r.isPassed && !r.isSuspicious);
+    } else if (filter === 'suspicious') {
+      return responses.filter((r) => r.isSuspicious);
     }
     return responses;
+  };
+
+  const downloadCandidateDetails = () => {
+    const filteredData = getFilteredResponses();
+    
+    // Prepare CSV content
+    const headers = ['Candidate ID', 'Name', 'Email', 'Score', 'Total Marks', 'Percentage', 'Status', 'Time Taken (min:sec)', 'Submitted At', 'Tab Switches', 'Suspicious'];
+    const rows = filteredData.map((r) => [
+      r.candidate.candidateId,
+      r.candidate.name,
+      r.candidate.email,
+      r.totalScore,
+      r.totalMarks,
+      r.percentage.toFixed(2),
+      r.isSuspicious ? 'SUSPICIOUS' : (r.isPassed ? 'PASSED' : 'FAILED'),
+      `${Math.floor(r.timeTaken / 60)}:${(r.timeTaken % 60).toString().padStart(2, '0')}`,
+      new Date(r.submittedAt).toLocaleString(),
+      r.tabSwitchCount || 0,
+      r.isSuspicious ? 'Yes' : 'No',
+    ]);
+
+    // Create CSV
+    let csvContent = headers.join(',') + '\n';
+    rows.forEach((row) => {
+      csvContent += row.map(cell => `"${cell}"`).join(',') + '\n';
+    });
+
+    // Download CSV
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${quiz?.title}-candidates-${new Date().getTime()}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
   };
 
   const formatDate = (dateString) => {
@@ -79,7 +118,7 @@ const AdminQuizResponses = () => {
 
         {/* Statistics */}
         {stats && (
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
             <div className="bg-white p-6 rounded-lg shadow-md text-center">
               <p className="text-gray-600 font-semibold mb-2">Total Attempts</p>
               <p className="text-4xl font-bold text-blue-600">{stats.totalAttempts}</p>
@@ -93,43 +132,63 @@ const AdminQuizResponses = () => {
               <p className="text-4xl font-bold text-red-600">{stats.failCount}</p>
             </div>
             <div className="bg-white p-6 rounded-lg shadow-md text-center">
+              <p className="text-gray-600 font-semibold mb-2">Suspicious</p>
+              <p className="text-4xl font-bold text-orange-600">{stats.suspiciousCount}</p>
+            </div>
+            <div className="bg-white p-6 rounded-lg shadow-md text-center">
               <p className="text-gray-600 font-semibold mb-2">Avg Score</p>
               <p className="text-4xl font-bold text-purple-600">{stats.averageScore}</p>
             </div>
             <div className="bg-white p-6 rounded-lg shadow-md text-center">
               <p className="text-gray-600 font-semibold mb-2">Avg %</p>
-              <p className="text-4xl font-bold text-orange-600">{stats.averagePercentage}%</p>
+              <p className="text-4xl font-bold text-indigo-600">{stats.averagePercentage}%</p>
             </div>
           </div>
         )}
 
-        {/* Filter Buttons */}
-        <div className="flex gap-4 mb-8">
+        {/* Filter Buttons and Download */}
+        <div className="flex flex-wrap gap-4 mb-8 items-center">
+          <div className="flex gap-4">
+            <button
+              onClick={() => setFilter('all')}
+              className={`px-6 py-2 rounded-lg font-semibold ${
+                filter === 'all' ? 'bg-blue-600 text-white' : 'bg-white text-gray-800 border border-gray-300'
+              }`}
+            >
+              All ({responses.length})
+            </button>
+            <button
+              onClick={() => setFilter('passed')}
+              className={`px-6 py-2 rounded-lg font-semibold ${
+                filter === 'passed'
+                  ? 'bg-green-600 text-white'
+                  : 'bg-white text-gray-800 border border-gray-300'
+              }`}
+            >
+              Passed ({responses.filter((r) => r.isPassed && !r.isSuspicious).length})
+            </button>
+            <button
+              onClick={() => setFilter('failed')}
+              className={`px-6 py-2 rounded-lg font-semibold ${
+                filter === 'failed' ? 'bg-red-600 text-white' : 'bg-white text-gray-800 border border-gray-300'
+              }`}
+            >
+              Failed ({responses.filter((r) => !r.isPassed && !r.isSuspicious).length})
+            </button>
+            <button
+              onClick={() => setFilter('suspicious')}
+              className={`px-6 py-2 rounded-lg font-semibold ${
+                filter === 'suspicious' ? 'bg-orange-600 text-white' : 'bg-white text-gray-800 border border-gray-300'
+              }`}
+            >
+              Suspicious ({responses.filter((r) => r.isSuspicious).length})
+            </button>
+          </div>
           <button
-            onClick={() => setFilter('all')}
-            className={`px-6 py-2 rounded-lg font-semibold ${
-              filter === 'all' ? 'bg-blue-600 text-white' : 'bg-white text-gray-800 border border-gray-300'
-            }`}
+            onClick={downloadCandidateDetails}
+            className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg font-semibold"
           >
-            All ({responses.length})
-          </button>
-          <button
-            onClick={() => setFilter('passed')}
-            className={`px-6 py-2 rounded-lg font-semibold ${
-              filter === 'passed'
-                ? 'bg-green-600 text-white'
-                : 'bg-white text-gray-800 border border-gray-300'
-            }`}
-          >
-            Passed ({responses.filter((r) => r.isPassed).length})
-          </button>
-          <button
-            onClick={() => setFilter('failed')}
-            className={`px-6 py-2 rounded-lg font-semibold ${
-              filter === 'failed' ? 'bg-red-600 text-white' : 'bg-white text-gray-800 border border-gray-300'
-            }`}
-          >
-            Failed ({responses.filter((r) => !r.isPassed).length})
+            📥 Download CSV
           </button>
         </div>
 
@@ -148,6 +207,8 @@ const AdminQuizResponses = () => {
                     <th className="px-6 py-3 text-left font-semibold text-gray-800">Score</th>
                     <th className="px-6 py-3 text-left font-semibold text-gray-800">Percentage</th>
                     <th className="px-6 py-3 text-left font-semibold text-gray-800">Status</th>
+                    <th className="px-6 py-3 text-left font-semibold text-gray-800">Suspicious</th>
+                    <th className="px-6 py-3 text-left font-semibold text-gray-800">Tab Switches</th>
                     <th className="px-6 py-3 text-left font-semibold text-gray-800">Time Taken</th>
                     <th className="px-6 py-3 text-left font-semibold text-gray-800">Submitted At</th>
                     <th className="px-6 py-3 text-left font-semibold text-gray-800">Action</th>
@@ -174,13 +235,27 @@ const AdminQuizResponses = () => {
                       <td className="px-6 py-4">
                         <span
                           className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                            response.isPassed
+                            response.isSuspicious
+                              ? 'bg-orange-100 text-orange-800'
+                              : response.isPassed
                               ? 'bg-green-100 text-green-800'
                               : 'bg-red-100 text-red-800'
                           }`}
                         >
-                          {response.isPassed ? '✓ Passed' : '✗ Failed'}
+                          {response.isSuspicious ? '🚨 SUSPICIOUS' : (response.isPassed ? '✓ Passed' : '✗ Failed')}
                         </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                            response.isSuspicious ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'
+                          }`}
+                        >
+                          {response.isSuspicious ? 'Yes' : 'No'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <p className="text-gray-800">{response.tabSwitchCount || 0}</p>
                       </td>
                       <td className="px-6 py-4">
                         <p className="text-gray-800">

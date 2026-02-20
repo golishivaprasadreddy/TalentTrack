@@ -42,8 +42,8 @@ const CandidateQuizDashboard = () => {
         quizLinkStr = linkedQuiz.split('/').pop();
       }
 
-      // Navigate to the quiz page
-      navigate(`/quiz/${quizLinkStr}`);
+      // Navigate to the SECURE quiz page with fullscreen & tab monitoring
+      navigate(`/quiz/take/${quizLinkStr}`);
     } catch (err) {
       setError('Invalid quiz link');
     }
@@ -68,7 +68,7 @@ const CandidateQuizDashboard = () => {
         <div className="bg-white p-6 rounded-lg shadow-md mb-8">
           <h2 className="text-2xl font-bold mb-4 text-gray-800">Access Quiz</h2>
           <p className="text-gray-600 mb-4">Enter the quiz link provided by your recruiter</p>
-          
+                     
           <div className="flex gap-4 mb-4">
             <input
               type="text"
@@ -104,61 +104,25 @@ const CandidateQuizDashboard = () => {
               <p className="text-gray-600">No quizzes taken yet</p>
             </div>
           ) : (
-            <div className="space-y-4">
-              {quizHistory.map((quiz) => (
-                <div
-                  key={quiz._id}
-                  className={`bg-white p-6 rounded-lg shadow-md border-l-4 ${
-                    quiz.isPassed ? 'border-green-600' : 'border-red-600'
-                  }`}
-                >
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex-1">
-                      <h3 className="text-xl font-bold text-gray-800">{quiz.quiz.title}</h3>
-                      <p className="text-gray-600 text-sm">Category: {quiz.quiz.category}</p>
-                    </div>
-                    <div className={`text-right font-bold ${quiz.isPassed ? 'text-green-600' : 'text-red-600'}`}>
-                      {quiz.isPassed ? '✅ PASSED' : '❌ FAILED'}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4 text-sm">
-                    <div>
-                      <p className="text-gray-600">Your Score</p>
-                      <p className="font-bold text-gray-800">
-                        {quiz.totalScore}/{quiz.totalMarks}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600">Percentage</p>
-                      <p className="font-bold text-gray-800">{quiz.percentage.toFixed(2)}%</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600">Time Taken</p>
-                      <p className="font-bold text-gray-800">
-                        {Math.floor(quiz.timeTaken / 60)}m {quiz.timeTaken % 60}s
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600">Passing Marks</p>
-                      <p className="font-bold text-gray-800">{quiz.quiz.passingMarks}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600">Date Taken</p>
-                      <p className="font-bold text-gray-800 text-xs">
-                        {formatDate(quiz.submittedAt)}
-                      </p>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => navigate(`/quiz/result/${quiz._id}`)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold text-sm"
-                  >
-                    View Details
-                  </button>
-                </div>
-              ))}
+            <div className="bg-white rounded-lg shadow-md">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-100 border-b">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Quiz Name</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Date Taken</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {quizHistory.map((quiz) => (
+                      <tr key={quiz._id} className="border-b hover:bg-gray-50 transition">
+                        <td className="px-6 py-4 text-gray-800 font-medium">{quiz.quiz.title}</td>
+                        <td className="px-6 py-4 text-gray-600 text-sm">{formatDate(quiz.submittedAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>

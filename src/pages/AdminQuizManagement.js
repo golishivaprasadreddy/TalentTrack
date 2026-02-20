@@ -11,7 +11,6 @@ const AdminQuizManagement = () => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    category: 'JavaScript',
     totalMarks: 100,
     passingMarks: 40,
     duration: 30,
@@ -22,7 +21,6 @@ const AdminQuizManagement = () => {
     questionText: '',
     marks: 1,
     questionType: 'MCQ',
-    difficulty: 'medium',
     options: [
       { text: '', isCorrect: false },
       { text: '', isCorrect: false },
@@ -57,10 +55,32 @@ const AdminQuizManagement = () => {
 
   const handleQuestionChange = (e) => {
     const { name, value } = e.target;
-    setCurrentQuestion((prev) => ({
-      ...prev,
-      [name]: name === 'marks' ? parseInt(value) : value,
-    }));
+    
+    // Handle question type change
+    if (name === 'questionType') {
+      const newOptions = value === 'true-false' 
+        ? [
+            { text: 'True', isCorrect: true },
+            { text: 'False', isCorrect: false },
+          ]
+        : [
+            { text: '', isCorrect: false },
+            { text: '', isCorrect: false },
+            { text: '', isCorrect: false },
+            { text: '', isCorrect: false },
+          ];
+      
+      setCurrentQuestion((prev) => ({
+        ...prev,
+        [name]: value,
+        options: newOptions,
+      }));
+    } else {
+      setCurrentQuestion((prev) => ({
+        ...prev,
+        [name]: name === 'marks' ? parseInt(value) : value,
+      }));
+    }
   };
 
   const handleOptionChange = (index, value) => {
@@ -103,7 +123,6 @@ const AdminQuizManagement = () => {
       questionText: '',
       marks: 1,
       questionType: 'MCQ',
-      difficulty: 'medium',
       options: [
         { text: '', isCorrect: false },
         { text: '', isCorrect: false },
@@ -135,7 +154,6 @@ const AdminQuizManagement = () => {
           questionText: q.questionText,
           marks: q.marks,
           questionType: q.questionType,
-          difficulty: q.difficulty,
           options: q.options,
         })),
       };
@@ -154,7 +172,6 @@ const AdminQuizManagement = () => {
       setFormData({
         title: '',
         description: '',
-        category: 'JavaScript',
         totalMarks: 100,
         passingMarks: 40,
         duration: 30,
@@ -183,7 +200,6 @@ const AdminQuizManagement = () => {
     setFormData({
       title: quiz.title,
       description: quiz.description,
-      category: quiz.category,
       totalMarks: quiz.totalMarks,
       passingMarks: quiz.passingMarks,
       duration: quiz.duration,
@@ -214,9 +230,9 @@ const AdminQuizManagement = () => {
   };
 
   const copyQuizLink = (quizLink) => {
-    const link = `${window.location.origin}/quiz/${quizLink}`;
+    const link = `${window.location.origin}/quiz/take/${quizLink}`;
     navigator.clipboard.writeText(link);
-    alert('Quiz link copied to clipboard!');
+    alert('Secure quiz link copied to clipboard!');
   };
 
   if (loading) {
@@ -234,7 +250,6 @@ const AdminQuizManagement = () => {
               setFormData({
                 title: '',
                 description: '',
-                category: 'JavaScript',
                 totalMarks: 100,
                 passingMarks: 40,
                 duration: 30,
@@ -264,25 +279,6 @@ const AdminQuizManagement = () => {
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                     required
                   />
-                </div>
-                <div>
-                  <label className="block text-gray-700 font-semibold mb-2">Category</label>
-                  <select
-                    name="category"
-                    value={formData.category}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                  >
-                    <option>JavaScript</option>
-                    <option>Python</option>
-                    <option>Java</option>
-                    <option>C++</option>
-                    <option>React</option>
-                    <option>Node.js</option>
-                    <option>SQL</option>
-                    <option>MongoDB</option>
-                    <option>General</option>
-                  </select>
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-gray-700 font-semibold mb-2">Description</label>
@@ -366,19 +362,6 @@ const AdminQuizManagement = () => {
                       >
                         <option>MCQ</option>
                         <option>true-false</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-gray-700 font-semibold mb-2">Difficulty</label>
-                      <select
-                        name="difficulty"
-                        value={currentQuestion.difficulty}
-                        onChange={handleQuestionChange}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                      >
-                        <option>easy</option>
-                        <option>medium</option>
-                        <option>hard</option>
                       </select>
                     </div>
                   </div>
@@ -469,10 +452,6 @@ const AdminQuizManagement = () => {
                   <p className="text-gray-600 mb-2">{quiz.description}</p>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4">
                     <div>
-                      <span className="font-semibold text-gray-700">Category:</span>
-                      <p className="text-gray-600">{quiz.category}</p>
-                    </div>
-                    <div>
                       <span className="font-semibold text-gray-700">Questions:</span>
                       <p className="text-gray-600">{quiz.totalQuestions}</p>
                     </div>
@@ -497,9 +476,9 @@ const AdminQuizManagement = () => {
                   </div>
 
                   <div className="mb-4">
-                    <p className="text-sm text-gray-600 font-semibold mb-2">Quiz Link:</p>
+                    <p className="text-sm text-gray-600 font-semibold mb-2">Secure Quiz Link:</p>
                     <code className="bg-gray-100 p-2 rounded text-xs break-all">
-                      {`${window.location.origin}/quiz/${quiz.quizLink}`}
+                      {`${window.location.origin}/quiz/take/${quiz.quizLink}`}
                     </code>
                   </div>
                 </div>
@@ -508,9 +487,9 @@ const AdminQuizManagement = () => {
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => copyQuizLink(quiz.quizLink)}
-                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded font-semibold text-sm"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-semibold text-sm flex items-center gap-2"
                 >
-                  Copy Link
+                  🔒 Copy Secure Link
                 </button>
                 <button
                   onClick={() => navigate(`/admin/quiz/${quiz._id}/responses`)}

@@ -16,8 +16,8 @@ import PanelDashboard from './pages/PanelDashboard';
 import PanelRoundDetail from './pages/PanelRoundDetail';
 import CandidateDashboard from './pages/CandidateDashboard';
 import CandidateQuizDashboard from './pages/CandidateQuizDashboard';
-import CandidateTakeQuiz from './pages/CandidateTakeQuiz';
 import CandidateQuizResult from './pages/CandidateQuizResult';
+import QuizDirectLink from './pages/QuizDirectLink';
 import './index.css';
 
 const HomePage = () => {
@@ -39,8 +39,9 @@ const HomePage = () => {
 const NavbarWrapper = () => {
   const location = useLocation();
   const publicRoutes = ['/login', '/register', '/forgot-password', '/reset-password'];
+  const quizRoutes = location.pathname.match(/^\/quiz\/take\//);
   
-  if (publicRoutes.includes(location.pathname)) {
+  if (publicRoutes.includes(location.pathname) || quizRoutes) {
     return null;
   }
   
@@ -58,6 +59,9 @@ const App = () => {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
+          
+          {/* Public Quiz Direct Link - handles auth internally */}
+          <Route path="/quiz/take/:quizLink" element={<QuizDirectLink />} />
 
           {/* Admin Routes */}
           <Route
@@ -133,14 +137,6 @@ const App = () => {
             element={
               <ProtectedRoute requiredRole="candidate">
                 <CandidateQuizDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/quiz/:quizLink"
-            element={
-              <ProtectedRoute requiredRole="candidate">
-                <CandidateTakeQuiz />
               </ProtectedRoute>
             }
           />
