@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import quizService from '../services/quizService';
@@ -6,7 +6,7 @@ import quizService from '../services/quizService';
 const CandidateTakeQuiz = () => {
   const { quizLink } = useParams();
   const navigate = useNavigate();
-  const { user, candidate } = useAuth();
+  const { candidate } = useAuth();
   const [quiz, setQuiz] = useState(null);
   const [loading, setLoading] = useState(true);
   const [timeLeft, setTimeLeft] = useState(null);
@@ -16,27 +16,7 @@ const CandidateTakeQuiz = () => {
   const [quizStarted, setQuizStarted] = useState(false);
   const [startTime, setStartTime] = useState(null);
 
-  useEffect(() => {
-    fetchQuiz();
-  }, [quizLink]);
-
-  useEffect(() => {
-    let timer;
-    if (quizStarted && timeLeft > 0) {
-      timer = setInterval(() => {
-        setTimeLeft((prev) => {
-          if (prev <= 1) {
-            handleAutoSubmit();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    return () => clearInterval(timer);
-  }, [quizStarted, timeLeft]);
-
-  const fetchQuiz = async () => {
+  const fetchQuiz = useCallback(async () => {
     try {
       setLoading(true);
       const data = await quizService.getQuizByLink(quizLink);
@@ -50,45 +30,13 @@ const CandidateTakeQuiz = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [quizLink, navigate]);
 
-  const initializeAnswers = (quizData) => {
-    const initialAnswers = {};
-    quizData.questions.forEach((q, index) => {
-      initialAnswers[index] = null;
-    });
-    setAnswers(initialAnswers);
-  };
+  useEffect(() => {
+    fetchQuiz();
+  }, [fetchQuiz]);
 
-  const handleStartQuiz = () => {
-    setQuizStarted(true);
-    setStartTime(new Date());
-  };
-
-  const handleAnswerSelect = (optionIndex) => {
-    setAnswers((prev) => ({
-      ...prev,
-      [currentQuestionIndex]: optionIndex,
-    }));
-  };
-
-  const handleNextQuestion = () => {
-    if (currentQuestionIndex < quiz.questions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-    }
-  };
-
-  const handlePreviousQuestion = () => {
-    if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(currentQuestionIndex - 1);
-    }
-  };
-
-  const handleAutoSubmit = () => {
-    handleSubmitQuiz();
-  };
-
-  const handleSubmitQuiz = async () => {
+  const handleSubmitQuiz = useCallback(async () => {
     if (!window.confirm('Are you sure you want to submit the quiz?')) {
       return;
     }
@@ -122,6 +70,58 @@ const CandidateTakeQuiz = () => {
       alert('Error submitting quiz: ' + error.message);
     } finally {
       setSubmitting(false);
+    }
+  }, [startTime, quiz, candidate, answers, navigate]);
+
+  const handleAutoSubmit = useCallback(() => {
+    handleSubmitQuiz();
+  }, [handleSubmitQuiz]);
+
+  useEffect(() => {
+    let timer;
+    if (quizStarted && timeLeft > 0) {
+      timer = setInterval(() => {
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            handleAutoSubmit();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [quizStarted, timeLeft, handleAutoSubmit]);
+
+  const initializeAnswers = (quizData) => {
+    const initialAnswers = {};
+    quizData.questions.forEach((q, index) => {
+      initialAnswers[index] = null;
+    });
+    setAnswers(initialAnswers);
+  };
+
+  const handleStartQuiz = () => {
+    setQuizStarted(true);
+    setStartTime(new Date());
+  };
+
+  const handleAnswerSelect = (optionIndex) => {
+    setAnswers((prev) => ({
+      ...prev,
+      [currentQuestionIndex]: optionIndex,
+    }));
+  };
+
+  const handleNextQuestion = () => {
+    if (currentQuestionIndex < quiz.questions.length - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+    }
+  };
+
+  const handlePreviousQuestion = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(currentQuestionIndex - 1);
     }
   };
 

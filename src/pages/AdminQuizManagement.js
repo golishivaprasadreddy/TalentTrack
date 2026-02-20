@@ -140,6 +140,11 @@ const AdminQuizManagement = () => {
         })),
       };
 
+      // Remove recruitmentDrive if it's empty
+      if (!quizPayload.recruitmentDrive) {
+        delete quizPayload.recruitmentDrive;
+      }
+
       if (editingQuiz) {
         await quizService.updateQuiz(editingQuiz._id, quizPayload);
       } else {
@@ -160,7 +165,16 @@ const AdminQuizManagement = () => {
       setEditingQuiz(null);
       fetchQuizzes();
     } catch (error) {
-      alert('Error saving quiz: ' + error.message);
+      console.error('Error saving quiz:', error);
+      
+      // Display more informative error messages
+      if (error.response?.data?.details) {
+        alert('Error saving quiz:\n' + error.response.data.details.join('\n'));
+      } else if (error.response?.data?.error) {
+        alert('Error saving quiz: ' + error.response.data.error);
+      } else {
+        alert('Error saving quiz: ' + error.message);
+      }
     }
   };
 

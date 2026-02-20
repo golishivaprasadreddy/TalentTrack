@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import quizService from '../services/quizService';
@@ -11,13 +11,7 @@ const CandidateQuizDashboard = () => {
   const [linkedQuiz, setLinkedQuiz] = useState('');
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    if (candidate?._id) {
-      fetchQuizHistory();
-    }
-  }, [candidate?._id]);
-
-  const fetchQuizHistory = async () => {
+  const fetchQuizHistory = useCallback(async () => {
     try {
       setLoading(true);
       const data = await quizService.getCandidateQuizzes(candidate._id);
@@ -27,7 +21,13 @@ const CandidateQuizDashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [candidate]);
+
+  useEffect(() => {
+    if (candidate?._id) {
+      fetchQuizHistory();
+    }
+  }, [candidate?._id, fetchQuizHistory]);
 
   const handleLoadQuizByLink = async () => {
     if (!linkedQuiz.trim()) {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import quizService from '../services/quizService';
 
@@ -9,11 +9,7 @@ const AdminQuizResponseDetail = () => {
   const [loading, setLoading] = useState(true);
   const [expandedQuestions, setExpandedQuestions] = useState({});
 
-  useEffect(() => {
-    fetchResponse();
-  }, [responseId]);
-
-  const fetchResponse = async () => {
+  const fetchResponse = useCallback(async () => {
     try {
       setLoading(true);
       const data = await quizService.getCandidateQuizResult(responseId);
@@ -25,7 +21,11 @@ const AdminQuizResponseDetail = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [responseId, navigate, quizId]);
+
+  useEffect(() => {
+    fetchResponse();
+  }, [fetchResponse]);
 
   const toggleQuestionExpand = (index) => {
     setExpandedQuestions((prev) => ({

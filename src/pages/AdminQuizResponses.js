@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import quizService from '../services/quizService';
 
@@ -11,11 +11,7 @@ const AdminQuizResponses = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all'); // all, passed, failed
 
-  useEffect(() => {
-    fetchData();
-  }, [quizId]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       const [responsesData, quizData, statsData] = await Promise.all([
@@ -33,7 +29,11 @@ const AdminQuizResponses = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [quizId]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const getFilteredResponses = () => {
     if (filter === 'passed') {
