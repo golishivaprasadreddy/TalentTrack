@@ -152,7 +152,7 @@ const QuizDirectLink = () => {
       console.log('Removing tab monitoring');
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [quizStarted, isSuspicious]);
+  }, [quizStarted, isSuspicious, tabSwitches]);
 
   // Submit quiz (must be defined before timer useEffect references it)
   const handleSubmit = useCallback(async () => {
