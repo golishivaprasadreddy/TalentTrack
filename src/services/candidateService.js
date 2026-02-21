@@ -10,6 +10,11 @@ const candidateService = {
     const response = await api.get('/candidate/status');
     return response.data;
   },
+
+  getQuizHistory: async () => {
+    const response = await api.get('/quiz/candidate/me');
+    return response.data;
+  },
 };
 
 export default candidateService;

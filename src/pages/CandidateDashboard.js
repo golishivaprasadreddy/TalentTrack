@@ -6,12 +6,17 @@ const CandidateDashboard = () => {
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [quizHistory, setQuizHistory] = useState([]);
 
   const fetchDashboard = useCallback(async () => {
     try {
       setRefreshing(true);
-      const data = await candidateService.getDashboard();
+      const [data, history] = await Promise.all([
+        candidateService.getDashboard(),
+        candidateService.getQuizHistory(),
+      ]);
       setDashboard(data);
+      setQuizHistory(history || []);
       console.log('Dashboard data updated at', new Date().toLocaleTimeString());
     } catch (error) {
       console.error('Error fetching dashboard:', error);
@@ -104,6 +109,45 @@ const CandidateDashboard = () => {
         <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-6 rounded-lg shadow-md mb-8">
           <h2 className="text-2xl font-bold mb-2">Current Status</h2>
           <p className="text-3xl font-bold">{dashboard.currentStatus}</p>
+        </div>
+
+        {/* Quiz History */}
+        <div className="bg-white p-6 rounded-lg shadow-md mb-8">
+          <h2 className="text-2xl font-bold mb-6">Quiz History</h2>
+          {quizHistory.length > 0 ? (
+            <div className="space-y-4">
+              {quizHistory.map((item) => (
+                <div key={item._id} className="border rounded-lg p-4">
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                    <div>
+                      <p className="text-lg font-semibold text-gray-800">{item.quiz?.title || 'Quiz'}</p>
+                      <p className="text-sm text-gray-600">Category: {item.quiz?.category || 'General'}</p>
+                      <p className="text-sm text-gray-600">
+                        Submitted: {item.submittedAt ? new Date(item.submittedAt).toLocaleString() : 'In Progress'}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-gray-600">Score</p>
+                      <p className="text-xl font-bold">
+                        {item.totalScore}/{item.totalMarks}
+                      </p>
+                      <p className="text-sm font-semibold text-gray-700">
+                        {item.isSuspicious
+                          ? 'SUSPICIOUS'
+                          : item.isPassed
+                          ? 'PASSED'
+                          : 'FAILED'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-gray-600">No quiz submissions yet.</p>
+            </div>
+          )}
         </div>
 
         {/* Results Timeline */}

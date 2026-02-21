@@ -23,6 +23,54 @@ const QuizDirectLink = () => {
   // Monitoring State
   const [isSuspicious, setIsSuspicious] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [isMobileDevice, setIsMobileDevice] = useState(false);
+  const [cameraError, setCameraError] = useState('');
+  const cameraStreamRef = React.useRef(null);
+  const cameraVideoRef = React.useRef(null);
+
+  useEffect(() => {
+    const checkDevice = () => {
+      const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+      const isMobileUA = /android|iphone|ipad|ipod|mobile/i.test(userAgent);
+      const isSmallScreen = window.innerWidth < 1024;
+      setIsMobileDevice(isMobileUA || isSmallScreen);
+    };
+
+    checkDevice();
+    window.addEventListener('resize', checkDevice);
+    return () => window.removeEventListener('resize', checkDevice);
+  }, []);
+
+  const stopCamera = useCallback(() => {
+    if (cameraStreamRef.current) {
+      cameraStreamRef.current.getTracks().forEach((track) => track.stop());
+      cameraStreamRef.current = null;
+    }
+    if (cameraVideoRef.current) {
+      cameraVideoRef.current.srcObject = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    const startCamera = async () => {
+      if (!quizStarted) return;
+      if (cameraStreamRef.current) return;
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        cameraStreamRef.current = stream;
+        if (cameraVideoRef.current) {
+          cameraVideoRef.current.srcObject = stream;
+        }
+        setCameraError('');
+      } catch (error) {
+        console.error('Camera error:', error);
+        setCameraError('Camera access is required to take this quiz.');
+      }
+    };
+
+    startCamera();
+    return () => stopCamera();
+  }, [quizStarted, stopCamera]);
 
   // Fetch quiz on mount
   useEffect(() => {
@@ -91,6 +139,7 @@ const QuizDirectLink = () => {
       if (promise) {
         await promise;
         console.log('Fullscreen request successful');
+        return true;
       } else {
         alert('Fullscreen is not supported on this browser');
         return false;
@@ -98,6 +147,7 @@ const QuizDirectLink = () => {
     } catch (error) {
       console.error('Fullscreen error:', error);
       alert('Press F11 to enable fullscreen or allow fullscreen access');
+      return false;
     }
   }, []);
 
@@ -158,6 +208,7 @@ const QuizDirectLink = () => {
       if (document.fullscreenElement) {
         document.exitFullscreen().catch(() => {});
       }
+      stopCamera();
       navigate('/candidate/dashboard');
     } catch (error) {
       alert('Error submitting quiz: ' + (error.response?.data?.error || error.message));
@@ -254,6 +305,7 @@ const QuizDirectLink = () => {
       if (document.fullscreenElement) {
         document.exitFullscreen().catch(() => {});
       }
+      stopCamera();
       navigate('/candidate/dashboard');
     } catch (error) {
       alert('Error: ' + (error.response?.data?.error || error.message));
@@ -282,13 +334,28 @@ const QuizDirectLink = () => {
 
   // Start quiz
   const startQuiz = useCallback(async () => {
-    if (!isFullscreen) {
-      alert('Please enter fullscreen mode first');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      cameraStreamRef.current = stream;
+      if (cameraVideoRef.current) {
+        cameraVideoRef.current.srcObject = stream;
+      }
+      setCameraError('');
+    } catch (error) {
+      console.error('Camera error:', error);
+      setCameraError('Camera access is required to take this quiz.');
+      alert('Camera access is required to start the quiz.');
+      return;
+    }
+    const fullscreenOk = isFullscreen || (await requestFullscreen());
+    if (!fullscreenOk) {
+      stopCamera();
+      alert('Fullscreen mode is required to start the quiz.');
       return;
     }
     setQuizStarted(true);
     setStartTime(new Date());
-  }, [isFullscreen]);
+  }, [isFullscreen, requestFullscreen, stopCamera]);
 
   // Handle answer change
   const handleAnswerChange = (index, value) => {
@@ -311,6 +378,20 @@ const QuizDirectLink = () => {
     return <div className="flex justify-center items-center h-screen text-gray-500">Loading quiz...</div>;
   }
 
+  if (isMobileDevice) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+        <div className="bg-white shadow-lg p-8 max-w-md w-full rounded-lg text-center">
+          <h1 className="text-2xl font-bold mb-4">Laptop Required</h1>
+          <p className="text-gray-700">
+            This quiz can only be taken on a laptop or desktop device. Please switch to a
+            larger screen and try again.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   // Pre-quiz screen (authentication already enforced)
   if (!quizStarted) {
     return (
@@ -323,9 +404,13 @@ const QuizDirectLink = () => {
             <h3 className="font-bold text-yellow-900 mb-3">⚠️ Security Requirements</h3>
             <ul className="text-sm text-yellow-800 space-y-2">
               <li>✓ Fullscreen mode is <strong>required</strong></li>
+              <li>✓ Camera access is <strong>required</strong></li>
               <li>✓ Tab switching will <strong>auto-submit</strong> your quiz immediately</li>
               <li>✓ Copy and paste are <strong>disabled</strong></li>
             </ul>
+            {cameraError && (
+              <p className="text-xs text-red-600 font-semibold mt-3">{cameraError}</p>
+            )}
           </div>
 
           <button 
@@ -339,14 +424,12 @@ const QuizDirectLink = () => {
             {isFullscreen ? '✓ Fullscreen Active' : 'Enter Fullscreen Mode'}
           </button>
 
-          {isFullscreen && (
-            <button 
-              onClick={startQuiz} 
-              className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 font-semibold transition"
-            >
-              Start Quiz
-            </button>
-          )}
+          <button 
+            onClick={startQuiz} 
+            className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 font-semibold transition"
+          >
+            Start Quiz (Camera + Fullscreen)
+          </button>
         </div>
       </div>
     );
@@ -372,6 +455,19 @@ const QuizDirectLink = () => {
         <div className="text-right">
           <div className={`text-3xl font-bold tabular-nums ${timeLeft < 300 ? 'text-red-600' : 'text-gray-800'}`}>
             {formatTime(timeLeft)}
+          </div>
+          <div className="mt-2 flex justify-end">
+            {cameraError ? (
+              <div className="text-xs text-red-600 font-semibold">{cameraError}</div>
+            ) : (
+              <video
+                ref={cameraVideoRef}
+                autoPlay
+                muted
+                playsInline
+                className="w-24 h-16 rounded border border-gray-300 object-cover"
+              />
+            )}
           </div>
         </div>
       </div>
