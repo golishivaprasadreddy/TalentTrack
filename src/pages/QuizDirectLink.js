@@ -3,8 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import quizService from '../services/quizService';
 
-const MAX_TAB_SWITCHES = 2;
-
 const QuizDirectLink = () => {
   const { quizLink } = useParams();
   const navigate = useNavigate();
@@ -23,7 +21,6 @@ const QuizDirectLink = () => {
   const [startTime, setStartTime] = useState(null);
   
   // Monitoring State
-  const [tabSwitches, setTabSwitches] = useState(0);
   const [isSuspicious, setIsSuspicious] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -124,25 +121,92 @@ const QuizDirectLink = () => {
     };
   }, []);
 
-  // Tab monitoring - NO tab switches allowed
+  // Auto-submit function (no confirmation) - used for time-up and tab-switch
+  // MUST be defined before useEffect hooks that use it
+  const autoSubmitQuiz = useCallback(async (reason = 'suspicious') => {
+    if (submitting) return; // Prevent double submission
+    
+    try {
+      setSubmitting(true);
+      const timeTaken = Math.floor((new Date() - startTime) / 1000);
+      
+      const submissionData = {
+        quizId: quiz._id,
+        answers: Object.entries(answers)
+          .map(([idx, optIdx]) => ({
+            questionId: quiz.questions[idx]._id,
+            selectedOptionIndex: optIdx,
+          }))
+          .filter(a => a.selectedOptionIndex !== null),
+        timeTaken,
+        isSuspicious: reason === 'tabswitch', // Only mark as suspicious for tab switch
+      };
+
+      const result = await quizService.submitQuizAnswers(submissionData);
+      
+      let alertMsg;
+      if (reason === 'tabswitch') {
+        alertMsg = `🚨 Quiz Auto-Submitted\n\nTab switching detected! Your quiz has been automatically submitted.\n\nScore: ${result.result.totalScore}/${result.result.totalMarks}\nPercentage: ${result.result.percentage.toFixed(2)}%\n\nThis attempt is marked as SUSPICIOUS and will be reviewed.`;
+      } else if (reason === 'timeup') {
+        alertMsg = `⏰ Time's Up!\n\nYour quiz has been automatically submitted.\n\nScore: ${result.result.totalScore}/${result.result.totalMarks}\nPercentage: ${result.result.percentage.toFixed(2)}%\nStatus: ${result.result.isPassed ? '✅ PASSED' : '❌ FAILED'}`;
+      } else {
+        alertMsg = `🚨 SUSPICIOUS\n\nYour attempt is marked as SUSPICIOUS.\n\nScore: ${result.result.totalScore}/${result.result.totalMarks}\nPercentage: ${result.result.percentage.toFixed(2)}%\n\nThis attempt will be reviewed by the admin.`;
+      }
+      
+      alert(alertMsg);
+      
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      }
+      navigate('/candidate/dashboard');
+    } catch (error) {
+      alert('Error submitting quiz: ' + (error.response?.data?.error || error.message));
+      console.error('Submission error:', error);
+    } finally {
+      setSubmitting(false);
+    }
+  }, [startTime, quiz, answers, navigate, submitting]);
+
+  // Prevent copy/cut keyboard shortcuts during quiz
   useEffect(() => {
-    if (!quizStarted) {
-      console.log('Quiz not started, tab monitoring disabled');
+    if (!quizStarted) return;
+
+    const preventCopyPaste = (e) => {
+      // Prevent Ctrl+C, Ctrl+X, Ctrl+V, Ctrl+A
+      if ((e.ctrlKey || e.metaKey) && ['c', 'x', 'v', 'a'].includes(e.key.toLowerCase())) {
+        e.preventDefault();
+        return false;
+      }
+      // Prevent F12 (Developer Tools)
+      if (e.key === 'F12') {
+        e.preventDefault();
+        return false;
+      }
+    };
+
+    document.addEventListener('keydown', preventCopyPaste);
+    
+    return () => {
+      document.removeEventListener('keydown', preventCopyPaste);
+    };
+  }, [quizStarted]);
+
+  // Tab monitoring - Auto-submit on tab switch
+  useEffect(() => {
+    if (!quizStarted || submitting) {
+      console.log('Quiz not started or already submitting, tab monitoring disabled');
       return;
     }
 
-    console.log('Tab monitoring enabled');
+    console.log('Tab monitoring enabled - will auto-submit on tab switch');
 
     const handleVisibilityChange = () => {
       console.log('Visibility event fired. Hidden:', document.hidden);
       
-      if (document.hidden && !isSuspicious) {
-        const newCount = tabSwitches + 1;
-        console.log('Tab switched. Count:', newCount, 'Marking as suspicious');
-        
-        setTabSwitches(newCount);
+      if (document.hidden && !isSuspicious && !submitting) {
+        console.log('Tab switch detected - auto-submitting quiz!');
         setIsSuspicious(true);
-        alert(`🚨 SUSPICIOUS ACTIVITY!\n\nTab switching is not allowed.\nYour attempt is now marked as SUSPICIOUS.`);
+        autoSubmitQuiz('tabswitch');
       }
     };
 
@@ -152,9 +216,9 @@ const QuizDirectLink = () => {
       console.log('Removing tab monitoring');
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [quizStarted, isSuspicious, tabSwitches]);
+  }, [quizStarted, isSuspicious, submitting, autoSubmitQuiz]);
 
-  // Submit quiz (must be defined before timer useEffect references it)
+  // Manual submit with confirmation
   const handleSubmit = useCallback(async () => {
     if (!window.confirm('Are you sure you want to submit the quiz?')) return;
 
@@ -179,7 +243,7 @@ const QuizDirectLink = () => {
       // If suspicious, show only SUSPICIOUS status (third group - neither pass nor fail)
       let alertMsg;
       if (isSuspicious) {
-        alertMsg = `🚨 SUSPICIOUS\n\nYour attempt is marked as SUSPICIOUS due to excessive tab switching.\n\nScore: ${result.result.totalScore}/${result.result.totalMarks}\nPercentage: ${result.result.percentage.toFixed(2)}%\n\nThis attempt will be reviewed by the admin.`;
+        alertMsg = `🚨 SUSPICIOUS\n\nYour attempt is marked as SUSPICIOUS.\n\nScore: ${result.result.totalScore}/${result.result.totalMarks}\nPercentage: ${result.result.percentage.toFixed(2)}%\n\nThis attempt will be reviewed by the admin.`;
       } else {
         // Normal case - show pass/fail status
         alertMsg = `Quiz Submitted!\n\nScore: ${result.result.totalScore}/${result.result.totalMarks}\nPercentage: ${result.result.percentage.toFixed(2)}%\nStatus: ${result.result.isPassed ? '✅ PASSED' : '❌ FAILED'}`;
@@ -188,7 +252,7 @@ const QuizDirectLink = () => {
       alert(alertMsg);
       
       if (document.fullscreenElement) {
-        document.exitFullscreen();
+        document.exitFullscreen().catch(() => {});
       }
       navigate('/candidate/dashboard');
     } catch (error) {
@@ -206,7 +270,7 @@ const QuizDirectLink = () => {
     const timer = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
-          handleSubmit();
+          autoSubmitQuiz('timeup');
           return 0;
         }
         return prev - 1;
@@ -214,7 +278,7 @@ const QuizDirectLink = () => {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [quizStarted, timeLeft, handleSubmit]);
+  }, [quizStarted, timeLeft, autoSubmitQuiz]);
 
   // Start quiz
   const startQuiz = useCallback(async () => {
@@ -259,8 +323,8 @@ const QuizDirectLink = () => {
             <h3 className="font-bold text-yellow-900 mb-3">⚠️ Security Requirements</h3>
             <ul className="text-sm text-yellow-800 space-y-2">
               <li>✓ Fullscreen mode is <strong>required</strong></li>
-              <li>✓ Tab switching will be <strong>monitored</strong></li>
-              <li>✓ <strong>NO tab switches</strong> allowed</li>
+              <li>✓ Tab switching will <strong>auto-submit</strong> your quiz immediately</li>
+              <li>✓ Copy and paste are <strong>disabled</strong></li>
             </ul>
           </div>
 
@@ -292,7 +356,13 @@ const QuizDirectLink = () => {
   const question = quiz.questions[currentQuestionIndex];
 
   return (
-    <div className="w-full h-screen bg-white flex flex-col overflow-hidden">
+    <div 
+      className="w-full h-screen bg-white flex flex-col overflow-hidden select-none"
+      onCopy={(e) => e.preventDefault()}
+      onCut={(e) => e.preventDefault()}
+      onPaste={(e) => e.preventDefault()}
+      onContextMenu={(e) => e.preventDefault()}
+    >
       {/* Header */}
       <div className="border-b bg-gray-100 p-4 flex justify-between items-center flex-shrink-0">
         <div>
@@ -303,11 +373,6 @@ const QuizDirectLink = () => {
           <div className={`text-3xl font-bold tabular-nums ${timeLeft < 300 ? 'text-red-600' : 'text-gray-800'}`}>
             {formatTime(timeLeft)}
           </div>
-          {tabSwitches > 0 && (
-            <p className={`text-xs mt-1 font-semibold ${isSuspicious ? 'text-red-600' : 'text-orange-600'}`}>
-              Tab Switches: {tabSwitches}/{MAX_TAB_SWITCHES} {isSuspicious ? '🚨 SUSPICIOUS' : ''}
-            </p>
-          )}
         </div>
       </div>
 

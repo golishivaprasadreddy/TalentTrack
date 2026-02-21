@@ -11,6 +11,7 @@ const AdminQuizManagement = () => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
+    category: 'General',
     totalMarks: 100,
     passingMarks: 40,
     duration: 30,
@@ -172,6 +173,7 @@ const AdminQuizManagement = () => {
       setFormData({
         title: '',
         description: '',
+        category: 'General',
         totalMarks: 100,
         passingMarks: 40,
         duration: 30,
@@ -200,6 +202,7 @@ const AdminQuizManagement = () => {
     setFormData({
       title: quiz.title,
       description: quiz.description,
+      category: quiz.category || 'General',
       totalMarks: quiz.totalMarks,
       passingMarks: quiz.passingMarks,
       duration: quiz.duration,
@@ -250,6 +253,7 @@ const AdminQuizManagement = () => {
               setFormData({
                 title: '',
                 description: '',
+                category: 'General',
                 totalMarks: 100,
                 passingMarks: 40,
                 duration: 30,
@@ -290,6 +294,26 @@ const AdminQuizManagement = () => {
                     rows="3"
                     required
                   />
+                </div>
+                <div>
+                  <label className="block text-gray-700 font-semibold mb-2">Category</label>
+                  <select
+                    name="category"
+                    value={formData.category}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                    required
+                  >
+                    <option value="General">General</option>
+                    <option value="JavaScript">JavaScript</option>
+                    <option value="Python">Python</option>
+                    <option value="Java">Java</option>
+                    <option value="C++">C++</option>
+                    <option value="React">React</option>
+                    <option value="Node.js">Node.js</option>
+                    <option value="SQL">SQL</option>
+                    <option value="MongoDB">MongoDB</option>
+                  </select>
                 </div>
                 <div>
                   <label className="block text-gray-700 font-semibold mb-2">Total Marks</label>
